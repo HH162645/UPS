@@ -1,146 +1,381 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UPS面单生成器</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <title>Shipment Tracking</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        .form { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 20px; background: #0071c5; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-        .label-container { max-width: 4in; margin: 30px auto; border: 1px solid #000; padding: 20px; font-size: 12px; }
-        .barcode { margin: 10px 0; }
-        .hidden { display: none; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Inter", "Arial", sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 40px 0;
+            line-height: 1.5;
+        }
+        .tracking-container {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .tracking-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .tracking-header h1 {
+            color: #1e293b;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+        .tracking-header p {
+            color: #64748b;
+            font-size: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .tracking-summary {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 35px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            align-items: center;
+            transition: box-shadow 0.3s ease;
+        }
+        .tracking-summary:hover {
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+        }
+        .summary-item {
+            flex: 1;
+            min-width: 160px;
+        }
+        .summary-item label {
+            display: block;
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .summary-item value {
+            display: block;
+            color: #1e293b;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .summary-status {
+            flex: 1;
+            min-width: 200px;
+            text-align: right;
+        }
+        .status-badge {
+            display: inline-block;
+            background-color: #e0f2fe;
+            color: #0284c7;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .tracking-progress {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 35px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            transition: box-shadow 0.3s ease;
+        }
+        .tracking-progress:hover {
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+        }
+        .progress-title {
+            color: #1e293b;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            height: 6px;
+            background-color: #f1f5f9;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #0284c7;
+            width: 70%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #94a3b8;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .progress-step.active {
+            color: #0284c7;
+            font-weight: 600;
+        }
+        .progress-step.inactive {
+            color: #cbd5e1;
+        }
+        .tracking-timeline {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .timeline-title {
+            color: #1e293b;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .timeline-item {
+            display: flex;
+            margin-bottom: 35px;
+            position: relative;
+            padding-left: 24px;
+        }
+        .timeline-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            position: absolute;
+            left: 0;
+            top: 4px;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+        .timeline-item.active .timeline-dot {
+            background: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+            transform: scale(1.2);
+        }
+        .timeline-item::before {
+            content: '';
+            width: 1px;
+            height: 100%;
+            background: #f1f5f9;
+            position: absolute;
+            left: 6px;
+            top: 18px;
+            z-index: 1;
+        }
+        .timeline-item:last-child::before {
+            display: none;
+        }
+        .timeline-time {
+            width: 130px;
+            color: #64748b;
+            font-size: 14px;
+            padding-top: 2px;
+            font-weight: 500;
+        }
+        .timeline-content {
+            flex: 1;
+            background-color: #f8fafc;
+            padding: 18px;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+        }
+        .timeline-item:hover .timeline-content {
+            background-color: #f0f9ff;
+        }
+        .timeline-content .status {
+            color: #1e293b;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .timeline-content .location {
+            color: #475569;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+        .timeline-content .description {
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        @media (max-width: 768px) {
+            .tracking-summary {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .summary-status {
+                text-align: left;
+                width: 100%;
+                margin-top: 10px;
+            }
+            .timeline-time {
+                width: 110px;
+            }
+            .progress-step {
+                font-size: 12px;
+            }
+        }
+        @media (max-width: 480px) {
+            .timeline-item {
+                flex-direction: column;
+                padding-left: 20px;
+            }
+            .timeline-time {
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            .tracking-header h1 {
+                font-size: 26px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="form">
-        <h1>UPS标准面单生成器</h1>
-        <div class="form-grid">
-            <!-- 寄件人 -->
-            <div>
-                <h3>寄件人信息</h3>
-                <div class="form-group">
-                    <label>编号1</label>
-                    <input type="text" id="sender-id1" value="MIYT1024">
-                </div>
-                <div class="form-group">
-                    <label>编号2</label>
-                    <input type="text" id="sender-id2" value="4374388899">
-                </div>
-                <div class="form-group">
-                    <label>地址</label>
-                    <input type="text" id="sender-address" value="245 WALKER DR">
-                </div>
-                <div class="form-group">
-                    <label>城市/邮编</label>
-                    <input type="text" id="sender-city" value="BRAMPTON ON L6T4H2">
+    <div class="tracking-container">
+        <div class="tracking-header">
+            <h1>Shipment Tracking</h1>
+            <p>Real-time updates for your delivery from China to Canada</p>
+        </div>
+
+        <div class="tracking-summary">
+            <div class="summary-item">
+                <label>Customer Tracking No.</label>
+                <value>888615616156</value>
+            </div>
+            <div class="summary-item">
+                <label>Forwarding No.</label>
+                <value>1ZC1G5682005036162</value>
+            </div>
+            <div class="summary-item">
+                <label>Order Date</label>
+                <value>Sep 15, 2025</value>
+            </div>
+            <div class="summary-item">
+                <label>Destination</label>
+                <value>Canada</value>
+            </div>
+            <div class="summary-status">
+                <span class="status-badge">Waiting for Train</span>
+            </div>
+        </div>
+
+        <div class="tracking-progress">
+            <div class="progress-title">Delivery Progress</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="progress-steps">
+                <span class="progress-step active">Ordered</span>
+                <span class="progress-step active">Collected</span>
+                <span class="progress-step active">Warehoused</span>
+                <span class="progress-step active">Shipped</span>
+                <span class="progress-step active">Arrived at Port</span>
+                <span class="progress-step active">Customs Inspected</span>
+                <span class="progress-step active">Waiting for Train</span>
+                <span class="progress-step inactive">Out for Delivery</span>
+                <span class="progress-step inactive">Delivered</span>
+            </div>
+        </div>
+
+        <div class="tracking-timeline">
+            <div class="timeline-title">Tracking History</div>
+
+            <div class="timeline-item active">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">2025-10-20<br>14:00 PM</div>
+                <div class="timeline-content">
+                    <div class="status">Waiting for Train</div>
+                    <div class="location">Location: CA-Vancouver (Port Area)</div>
+                    <div class="description">The shipment is queuing to be loaded onto the train for inland transportation to the final destination.</div>
                 </div>
             </div>
-            <!-- 收件人 -->
-            <div>
-                <h3>收件人信息</h3>
-                <div class="form-group">
-                    <label>姓名</label>
-                    <input type="text" id="receiver-name" value="MANSUKH RAKHRAJ">
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">2025-10-15<br>09:30 AM</div>
+                <div class="timeline-content">
+                    <div class="status">Customs Inspection Completed</div>
+                    <div class="location">Location: CA-Vancouver (Customs Office)</div>
+                    <div class="description">The customs inspection of the shipment has been completed, and it meets the import requirements of Canada.</div>
                 </div>
-                <div class="form-group">
-                    <label>电话</label>
-                    <input type="text" id="receiver-phone" value="4377769663">
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">2025-10-21<br>11:00 AM</div>
+                <div class="timeline-content">
+                    <div class="status">Customs Inspection Notified</div>
+                    <div class="location">Location: CA-Vancouver (Port Customs)</div>
+                    <div class="description">The shipment has been selected for customs inspection, and relevant documents are being verified.</div>
                 </div>
-                <div class="form-group">
-                    <label>地址</label>
-                    <input type="text" id="receiver-address" value="10 VILLAGEWOOD STREET">
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">2025-10-26<br>08:00 AM</div>
+                <div class="timeline-content">
+                    <div class="status">Arrived at Port</div>
+                    <div class="location">Location: CA-Vancouver (Port of Vancouver)</div>
+                    <div class="description">The shipment has arrived at the port of Vancouver, Canada, and is awaiting customs clearance.</div>
                 </div>
-                <div class="form-group">
-                    <label>城市/邮编</label>
-                    <input type="text" id="receiver-city" value="BRAMPTON ON M1V2T7">
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">2025-09-28<br>16:00 PM</div>
+                <div class="timeline-content">
+                    <div class="status">Shipped</div>
+                    <div class="location">Location: CN-Shenzhen (Yantian Port)</div>
+                    <div class="description">The shipment has departed from Yantian Port in Shenzhen, China, and is en route to Canada by sea.</div>
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">2025-09-20<br>10:00 AM</div>
+                <div class="timeline-content">
+                    <div class="status">Warehoused</div>
+                    <div class="location">Location: CN-Shenzhen (Shenzhen Warehouse)</div>
+                    <div class="description">The shipment has been stored in the warehouse, preparing for sea shipment to Canada from Yantian Port.</div>
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">2025-09-15<br>06:00 PM</div>
+                <div class="timeline-content">
+                    <div class="status">Collected</div>
+                    <div class="location">Location: CN-Shenzhen (Collection Point)</div>
+                    <div class="description">The shipment has been collected by the courier after the order was placed.</div>
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">2025-09-15<br>10:00 AM</div>
+                <div class="timeline-content">
+                    <div class="status">Ordered</div>
+                    <div class="location">Location: CN-Shenzhen (Online Order)</div>
+                    <div class="description">The shipment order has been placed successfully.</div>
                 </div>
             </div>
         </div>
-        <div class="form-group">
-            <label>运单号</label>
-            <input type="text" id="tracking" value="1Z HF3 402 20 0761 6057">
-        </div>
-        <button onclick="generateLabel()">生成UPS面单</button>
     </div>
-
-    <div id="label-preview" class="hidden">
-        <div class="label-container">
-            <div style="display: flex; justify-content: space-between;">
-                <div>
-                    <div>${document.getElementById('sender-id1').value}</div>
-                    <div>${document.getElementById('sender-id2').value}</div>
-                    <div>${document.getElementById('sender-address').value}</div>
-                    <div>${document.getElementById('sender-city').value}</div>
-                </div>
-                <div>8 KG<br>1 OF 4</div>
-            </div>
-            <div style="text-align: right; margin: 10px 0;">
-                SHP#: HF34 024Q FPL<br>
-                SHP WT: 25 KG<br>
-                DWT: 50,47,42
-            </div>
-            <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px;">
-                <strong>SHIP TO:</strong><br>
-                ${document.getElementById('receiver-name').value}<br>
-                ${document.getElementById('receiver-phone').value}<br>
-                ${document.getElementById('receiver-address').value}<br>
-                <strong>${document.getElementById('receiver-city').value}</strong>
-            </div>
-            <div style="display: flex; gap: 10px; align-items: center; margin: 10px 0;">
-                <div id="qrcode-placeholder" style="width: 80px; height: 80px; border: 1px solid #000; display: flex; align-items: center; justify-content: center;">
-                    二维码
-                </div>
-                <div>
-                    <div style="font-size: 16px; font-weight: bold;">CAN 457 9-01</div>
-                    <div id="region-barcode" class="barcode"></div>
-                </div>
-            </div>
-            <div style="font-size: 16px; font-weight: bold; margin: 5px 0;">UPS STANDARD</div>
-            <div>
-                <div>TRACKING #: ${document.getElementById('tracking').value}</div>
-                <div id="tracking-barcode" class="barcode"></div>
-            </div>
-            <div style="font-weight: bold; margin: 10px 0;">BILLING: P/P</div>
-            <div style="font-size: 10px;">
-                Reference No.1: MIYT10225504<br>
-                Reference No.2: 88851231325<br>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>XOL25.10.01</span>
-                    <span>NV49 42.DA 10/2025*</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function generateLabel() {
-            // 填充面单数据
-            const labelHtml = document.getElementById('label-preview').innerHTML
-                .replace(/\${document.getElementById\('sender-id1'\).value}/g, document.getElementById('sender-id1').value)
-                .replace(/\${document.getElementById\('sender-id2'\).value}/g, document.getElementById('sender-id2').value)
-                .replace(/\${document.getElementById\('sender-address'\).value}/g, document.getElementById('sender-address').value)
-                .replace(/\${document.getElementById\('sender-city'\).value}/g, document.getElementById('sender-city').value)
-                .replace(/\${document.getElementById\('receiver-name'\).value}/g, document.getElementById('receiver-name').value)
-                .replace(/\${document.getElementById\('receiver-phone'\).value}/g, document.getElementById('receiver-phone').value)
-                .replace(/\${document.getElementById\('receiver-address'\).value}/g, document.getElementById('receiver-address').value)
-                .replace(/\${document.getElementById\('receiver-city'\).value}/g, document.getElementById('receiver-city').value)
-                .replace(/\${document.getElementById\('tracking'\).value}/g, document.getElementById('tracking').value);
-            document.getElementById('label-preview').innerHTML = labelHtml;
-
-            // 生成条码
-            JsBarcode(document.getElementById('region-barcode'), 'CAN4579-01', { format: 'CODE128', height: 30 });
-            JsBarcode(document.getElementById('tracking-barcode'), document.getElementById('tracking').value.replace(/\s/g, ''), { format: 'CODE128', height: 40 });
-
-            // 显示面单
-            document.getElementById('label-preview').classList.remove('hidden');
-        }
-    </script>
 </body>
 </html>
